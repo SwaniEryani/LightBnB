@@ -1,0 +1,8 @@
+
+    SELECT properties.id, reservations.guest_id, AVG(rating) as average_rating
+    FROM properties
+    JOIN reservations ON properties.id = reservations.property_id
+    JOIN users ON users.id = reservations.guest_id
+    LEFT JOIN property_reviews ON property_reviews.property_id = properties.id
+    WHERE reservations.guest_id = 5
+    GROUP BY reservations.guest_id;
