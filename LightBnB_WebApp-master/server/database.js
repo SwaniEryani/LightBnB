@@ -90,24 +90,56 @@ exports.getAllReservations = getAllReservations;
  */
 const getAllProperties = function(options, limit = 10) {
   //POOL
-  return pool.query(`
-    SELECT properties.*,AVG(rating) as average_rating
-    FROM properties
-    LEFT JOIN property_reviews ON property_id = properties.id
-    GROUP BY properties.id
-    LIMIT $1;
-  `, [limit])
-  .then(res => res.rows)
-  .catch(err => console.error('query error', err.stack));
-  // return pool.query(`
-  // SELECT properties.* ,AVG(rating) as average_rating
-  // FROM properties
-  // LEFT JOIN property_reviews ON property_id = properties.id
-  // GROUP BY properties.id
-  // LIMIT $1
-  // `, [limit])
-  // .then(res => res.rows)
-  // .catch(err => console.error('query error', err.stack));
+  const queryParams = [];
+  // 2
+  let queryString = `
+  SELECT properties.*, avg(property_reviews.rating) as average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id 
+  `;
+ 
+  // 3
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    queryString += `WHERE LOWER(city) LIKE LOWER($${queryParams.length}) `;
+  }
+
+  if(options.minimum_price_per_night){
+    queryParams.push(`${options.minimum_price_per_night}`);
+    if(queryParams.length > 1){
+      queryString += `AND cost_per_night >= $${queryParams.length} `;
+    } else {
+      queryString += `WHERE cost_per_night >= $${queryParams.length} `;
+    }
+  }
+  if(options.maximum_price_per_night){
+    queryParams.push(`${options.maximum_price_per_night}`);
+    if(queryParams.length > 1){
+      queryString += `AND cost_per_night <= $${queryParams.length} `;
+    } else{
+      queryString += `WHERE cost_per_night <= $${queryParams.length} `;
+    }
+  }
+
+  queryString += `GROUP BY properties.id `;
+
+  if(options.minimum_rating){
+    queryParams.push(`${options.minimum_rating}`);
+    queryString += `HAVING AVG(property_reviews.rating) >= $${queryParams.length} `;
+  }
+  // 4
+  queryParams.push(limit);
+  queryString += `
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.length} ;
+  `;
+  
+  // 5
+  console.log(queryString, queryParams);
+
+  // 6
+  return pool.query(queryString, queryParams)
+  .then(res => res.rows);
 }
 exports.getAllProperties = getAllProperties;
 
