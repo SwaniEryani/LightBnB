@@ -72,7 +72,8 @@ const getAllReservations = function(guest_id, limit = 10) {
     JOIN reservations ON properties.id = reservations.property_id
     JOIN users ON users.id = reservations.guest_id
     LEFT JOIN property_reviews ON property_reviews.property_id = properties.id
-    WHERE reservations.guest_id =  $1   
+    WHERE reservations.guest_id =  $1
+    AND reservations.end_date < now()::date  
     GROUP BY properties.id, reservations.id
     ORDER BY reservations.start_date
     LIMIT $2;
@@ -134,10 +135,6 @@ const getAllProperties = function(options, limit = 10) {
   LIMIT $${queryParams.length} ;
   `;
   
-  // 5
-  console.log(queryString, queryParams);
-
-  // 6
   return pool.query(queryString, queryParams)
   .then(res => res.rows);
 }
@@ -150,6 +147,22 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function(property) {
+  let values =[
+    property.owner_id,
+    property.title,
+    property.description,
+    property.thumbnail_photo_url,
+    property.cover_photo_url,
+    property.cost_per_night,
+    property.street,
+    property.city,
+    property.province,
+    property.post_code,
+    property.country,
+    property.parking_spaces,
+    property.number_of_bathrooms,
+    property.number_of_bedrooms];
+
   pool.query(`
   INSERT INTO properties (
     owner_id,
@@ -168,19 +181,6 @@ const addProperty = function(property) {
     number_of_bedrooms) 
     VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *;
-  `,[Property.owner_id,
-    Property.title,
-    Property.description,
-    Property.thumbnail_photo_url,
-    Property.cover_photo_url,
-    Property.cost_per_night,
-    Property.street,
-    Property.city,
-    Property.province,
-    Property.post_code,
-    Property.country,
-    Property.parking_spaces,
-    Property.number_of_bathrooms,
-    Property.number_of_bedrooms]).then(res => res.rows[0]);
+  `,values).then(res => res.rows[0]);
 }
 exports.addProperty = addProperty;
